@@ -1,10 +1,13 @@
 SRC=x-screenshot.c
 EXE=x-screenshot
 
+CFLAGS=-O3 -Wall -Wextra -fopenmp # threading is marginally faster
+LDFLAGS=-lX11 -lpng
+
 all: $(EXE)
 
 $(EXE): $(SRC)
-	$(CC) -O3 -Wall -lX11 -lpng $< -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $< -o $@
 
 clean:
 	rm -f $(EXE)
