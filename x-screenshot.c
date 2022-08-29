@@ -7,7 +7,6 @@
 #include <X11/Xutil.h>
 #include <png.h>
 
-
 Window
 get_window(int argc, char ** argv, Display * display)
 {
@@ -111,7 +110,8 @@ write_png(int width, int height, unsigned char ** lines)
 	png_destroy_write_struct(&write_struct, NULL);
 }
 
-int main(int argc, char ** argv)
+int
+main(int argc, char ** argv)
 {
 	Display * display = XOpenDisplay(NULL);
 
