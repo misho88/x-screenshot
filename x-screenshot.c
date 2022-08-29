@@ -7,6 +7,9 @@
 #include <X11/Xutil.h>
 #include <png.h>
 
+/**
+ * get dimensions of window on display, store in *width and *height
+ */
 void
 get_dimensions(Display * display, Window window, int * width, int * height)
 {
@@ -16,6 +19,9 @@ get_dimensions(Display * display, Window window, int * width, int * height)
 	*height = window_attributes.height;
 }
 
+/**
+ * take a screenshot of window and display and return as a XImage*
+ */
 XImage *
 get_screenshot(Display * display, Window window)
 {
@@ -34,11 +40,17 @@ get_screenshot(Display * display, Window window)
 	return image;
 }
 
+/**
+ * describe a rectangle stored regularly but non-contiguously in memory
+ */
 struct mem2d {
 	unsigned char * origin;
 	ssize_t n_rows, n_cols, row_stride, col_stride;
 };
 
+/**
+ * average all the elements of a memory map
+ */
 int
 mean(struct mem2d m)
 {
@@ -51,6 +63,9 @@ mean(struct mem2d m)
 	return sum / (m.n_rows * m.n_cols);
 }
 
+/**
+ * extract a rectangular subdomain from a memory map
+ */
 struct mem2d
 region(struct mem2d m, ssize_t i, ssize_t j, ssize_t n_rows, ssize_t n_cols)
 {
@@ -63,6 +78,9 @@ region(struct mem2d m, ssize_t i, ssize_t j, ssize_t n_rows, ssize_t n_cols)
 	};
 }
 
+/**
+ * scale down rectangle in so that it fits out
+ */
 void
 shrink(struct mem2d in, struct mem2d out)
 {
@@ -71,7 +89,7 @@ shrink(struct mem2d in, struct mem2d out)
 
 	ssize_t row_scale = in.n_rows / out.n_rows;
 	ssize_t col_scale = in.n_cols / out.n_cols;
-	if (row_scale == 1 && col_scale == 1)
+	if (row_scale == 1 && col_scale == 1) // this is just a copy, so keep it simple
 		for (ssize_t i = 0; i < out.n_rows; i++)
 			for (ssize_t j = 0; j < out.n_cols; j++)
 				out.origin[
@@ -89,9 +107,17 @@ shrink(struct mem2d in, struct mem2d out)
 				);
 }
 
+/**
+ * write image m to stdout as a PNG
+ *
+ * m.col_stride must be 3 for libpng to accept this
+ */
 void
 write_png(struct mem2d m)
 {
+	if (m.col_stride != 3)
+		exit(101);  // this should only happen if something is messed up internally
+
 	unsigned char ** lines = malloc(m.n_rows * sizeof(unsigned char *));
 	if (lines == NULL) { perror("malloc"); exit(1); }
 	for (int i = 0; i < m.n_rows; i++)
@@ -122,6 +148,8 @@ write_png(struct mem2d m)
 
 	free(lines);
 }
+
+/* set up argument parsing */
 
 #include "xargparse.h"
 
@@ -156,8 +184,8 @@ xap_define_fprint_help(fprint_help, arguments, display_hints);
 int
 main(int argc, char ** argv)
 {
+	/* parse arguments */
 	struct args args = { .id = -1, .width = -1, .height = -1 };
-
 	xap_error_context_t ctx = parse(&argc, argv, &args);
 	if (ctx.error) {
 		xap_fprint_error_context(&ctx, stderr);
@@ -180,15 +208,14 @@ main(int argc, char ** argv)
 		return 1;
 	}
 
+	/* grab a screenshot */
 	Display * display = XOpenDisplay(NULL);
-
 	Window window = args.id < 0 ? DefaultRootWindow(display) : (Window)args.id;
-
 	XImage * image = get_screenshot(display, window);
 
+	/* prepare output image */
 	if (args.width  < 0) args.width  = image->width ;
 	if (args.height < 0) args.height = image->height;
-
 	int width, height;
 	if (args.width * image->height < args.height * image->width) {
 		width = args.width < image->width ? args.width : image->width;
@@ -198,11 +225,10 @@ main(int argc, char ** argv)
 		height = args.height < image->height ? args.height : image->height;
 		width = image->width * args.height / image->height;
 	}
-
-
 	unsigned char * shrunken = malloc(width * height * 3);
 	if (shrunken == NULL) { perror("malloc"); exit(1); }
 
+	/* fill output image */
 	#pragma omp parallel for
 	for (int c = 0; c < 3; c++)
 		shrink((struct mem2d){
@@ -219,6 +245,7 @@ main(int argc, char ** argv)
 			.col_stride = 3
 		});
 
+	/* write output image */
 	write_png((struct mem2d){
 		.origin = shrunken,
 		.n_rows = height,
@@ -227,9 +254,8 @@ main(int argc, char ** argv)
 		.col_stride = 3
 	});
 
+	/* clean up */
 	free(shrunken);
-
 	XDestroyImage(image);
-
 	return 0;
 }
