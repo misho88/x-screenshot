@@ -1,5 +1,17 @@
-all: x-screenshot.c
-	$(CC) -O3 -Wall -lX11 -lpng $< -o x-screenshot
+SRC=x-screenshot.c
+EXE=x-screenshot
+
+all: $(EXE)
+
+$(EXE): $(SRC)
+	$(CC) -O3 -Wall -lX11 -lpng $< -o $@
 
 clean:
-	rm -f x-screenshot
+	rm -f $(EXE)
+
+install: $(EXE)
+	install -d /usr/local/bin
+	install $< /usr/local/bin
+
+uninstall:
+	rm -f /usr/local/bin/$(EXE)
