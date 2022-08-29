@@ -141,8 +141,10 @@ write_png(struct mem2d m)
 		PNG_FILTER_TYPE_BASE
 	);
 	png_write_info(write_struct, info_struct);
-
 	png_write_image(write_struct, lines);
+	png_write_end(write_struct, info_struct);
+
+
 	png_free_data(write_struct, info_struct, PNG_FREE_ALL, -1);
 	png_destroy_write_struct(&write_struct, NULL);
 
@@ -159,6 +161,7 @@ write_png(struct mem2d m)
 	_('v', "version", bool        , version,    , xap_toggle) \
 	_('W', "width"  , int         , width  ,    , xap_int   ) \
 	_('H', "height" , int         , height ,    , xap_int   ) \
+	_('r', "raw   " , bool        , raw    ,    , xap_toggle) \
 	_( 1 , NULL     , int         , id     ,    , xap_int   )
 
 #define stop_after(_) \
@@ -212,6 +215,12 @@ main(int argc, char ** argv)
 	Display * display = XOpenDisplay(NULL);
 	Window window = args.id < 0 ? DefaultRootWindow(display) : (Window)args.id;
 	XImage * image = get_screenshot(display, window);
+
+	if (args.raw) {
+		fwrite(image->data, image->bytes_per_line, image->height, stdout);
+		XDestroyImage(image);
+		return 0;
+	}
 
 	/* prepare output image */
 	if (args.width  < 0) args.width  = image->width ;
