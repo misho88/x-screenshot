@@ -7,15 +7,25 @@
 #include <X11/Xutil.h>
 #include <png.h>
 
+
 Window
 get_window(int argc, char ** argv, Display * display)
 {
 	if (argc == 1)
 		return DefaultRootWindow(display);
 
-	char * str = argv[1], * endptr;
 	errno = 0;
-	Window window = strtol(str, &endptr, 10);
+	char * str = argv[1], * endptr;
+	int base;
+	if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) {
+		str += 2;
+		base = 16;
+	}
+	else {
+		base = 10;
+	}
+
+	Window window = strtol(str, &endptr, base);
 	if (errno != 0 || endptr == str) {
 		fprintf(stderr, "argument should be a window ID\n");
 		exit(1);
