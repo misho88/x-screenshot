@@ -171,10 +171,14 @@ xap_error_t scanf_int(int argc, char ** argv, int * target, int * consumed)
 	if (argc < 1) return "need another argument";
 	if (argv[0][0] == '\0') return "empty argument";
 
+	long int i;
 	ssize_t n;
-	int rv = sscanf(argv[0], "%i%ln", target, &n);
+	int rv = sscanf(argv[0], "%li%ln", &i, &n);
 	while (isspace(argv[0][n])) n++;
-	if (rv != 1 || argv[0][n] != '\0') return "not an integer";
+	if (rv != 1 || argv[0][n] != '\0') return "not an whole number";
+	if (i < 0) return "not a positive number";
+	if (i > 0x7FFFFFFFL) return "too large";
+	*target = i;
 	*consumed = 1;
 	return NULL;
 }
