@@ -84,8 +84,16 @@ region(struct mem2d m, ssize_t i, ssize_t j, ssize_t n_rows, ssize_t n_cols)
 void
 shrink(struct mem2d in, struct mem2d out)
 {
-	if (in.n_rows < out.n_rows || in.n_cols < out.n_rows)
-		exit(101);  // this should only happen if something is messed up internally
+	// this should only happen if something is messed up internally
+	if (in.n_rows < out.n_rows || in.n_cols < out.n_cols) {
+		fprintf(
+			stderr,
+			"can't shrink from %ldx%ld to %ldx%ld\n",
+			in.n_cols, in.n_rows,
+			out.n_cols, out.n_rows
+		);
+		exit(101);
+	}
 
 	ssize_t row_scale = in.n_rows / out.n_rows;
 	ssize_t col_scale = in.n_cols / out.n_cols;
@@ -155,14 +163,28 @@ write_png(struct mem2d m)
 
 #include "xargparse.h"
 
+static inline
+xap_error_t scanf_int(int argc, char ** argv, int * target, int * consumed)
+{
+	*consumed = 0;
+	if (argc < 1) return "need another argument";
+	if (argv[0][0] == '\0') return "empty argument";
+
+	int rv = sscanf(argv[0], "%i", target);
+	if (rv != 1) return "not an integer";
+	*consumed = 1;
+	return NULL;
+}
+
+
 #define arguments(_) \
 	_( 0 , NULL     , char const *, program,    , xap_string) \
 	_('h', "help"   , bool        , help   ,    , xap_toggle) \
 	_('v', "version", bool        , version,    , xap_toggle) \
-	_('W', "width"  , int         , width  ,    , xap_int   ) \
-	_('H', "height" , int         , height ,    , xap_int   ) \
-	_('r', "raw   " , bool        , raw    ,    , xap_toggle) \
-	_( 1 , NULL     , int         , id     ,    , xap_int   )
+	_('W', "width"  , int         , width  ,    , scanf_int ) \
+	_('H', "height" , int         , height ,    , scanf_int ) \
+	_('r', "raw"    , bool        , raw    ,    , xap_toggle) \
+	_( 1 , NULL     , int         , id     ,    , scanf_int )
 
 #define stop_after(_) \
 	_('h', "help"   ) \
