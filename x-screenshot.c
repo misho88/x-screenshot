@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <errno.h>
 #include <X11/X.h>
 #include <X11/Xlib.h>
@@ -170,8 +171,10 @@ xap_error_t scanf_int(int argc, char ** argv, int * target, int * consumed)
 	if (argc < 1) return "need another argument";
 	if (argv[0][0] == '\0') return "empty argument";
 
-	int rv = sscanf(argv[0], "%i", target);
-	if (rv != 1) return "not an integer";
+	ssize_t n;
+	int rv = sscanf(argv[0], "%i%ln", target, &n);
+	while (isspace(argv[0][n])) n++;
+	if (rv != 1 || argv[0][n] != '\0') return "not an integer";
 	*consumed = 1;
 	return NULL;
 }
